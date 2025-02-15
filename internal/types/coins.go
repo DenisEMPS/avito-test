@@ -26,12 +26,6 @@ type Sent struct {
 	Amount int    `db:"amount"`
 }
 
-///
-///
-///
-///
-//
-
 type SendCoinRequest struct {
 	ToUser string `json:"to_user"`
 	Amount int    `json:"amount"`

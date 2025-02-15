@@ -140,20 +140,29 @@ func (r *CoinsPostgres) Send(username string, details types.SendCoinRequest) err
 	if err != nil {
 		return fmt.Errorf("error to start transaction: %w %s", err, op)
 	}
-	queryCoinsUpdate := `UPDATE users SET coins = coins - $1
-						WHERE username = $2`
-	_, err = tx.Exec(queryCoinsUpdate, details.Amount, username)
+
+	query = `INSERT INTO coins_transactions (from_user, to_user, amount)
+			VALUES ($1, $2, $3)`
+	_, err = tx.Exec(query, username, details.ToUser, details.Amount)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("failed to update coins balance: %w %s", err, op)
+		return fmt.Errorf("failed to update transaction table: %w %s", err, op)
 	}
 
-	queryCoinsUpdate = `UPDATE users SET coins = coins + $1 
+	query = `UPDATE users SET coins = coins - $1
 						WHERE username = $2`
-	_, err = tx.Exec(queryCoinsUpdate, details.Amount, details.ToUser)
+	_, err = tx.Exec(query, details.Amount, username)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("failed to update coins balance: %w %s", err, op)
+		return fmt.Errorf("failed to update coins balance: %w %s %s", err, username, op)
+	}
+
+	query = `UPDATE users SET coins = coins + $1 
+						WHERE username = $2`
+	_, err = tx.Exec(query, details.Amount, details.ToUser)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update coins balance: %w %s %s", err, details.ToUser, op)
 	}
 
 	return tx.Commit()

@@ -56,6 +56,11 @@ func (h *Handler) SendCoins(c *gin.Context) {
 		return
 	}
 
+	if username == input.ToUser {
+		NewErrorResponse(c, http.StatusBadRequest, "invalid request")
+		return
+	}
+
 	err = h.services.Send(username, input)
 	if err != nil {
 		if errors.Is(err, service.ErrRecieverNotFound) {
