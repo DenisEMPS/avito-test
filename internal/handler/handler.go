@@ -25,20 +25,20 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		auth.POST("/sign-in", h.SignIn)
 	}
 
-	api := r.Group("/api/v1")
+	api := r.Group("/api/v1", h.UserIdentity)
 	{
 		users := api.Group("/users")
 		{
-			coins := users.Group("/:user_id/funds")
+			users.GET("/:id")
+			coins := users.Group("/:id/coins")
 			{
-				coins.GET("/history", h.GetCoinsHistory)
-				coins.POST("/send", h.SendFunds)
+				coins.GET("/", h.GetCoinsHistory)
+				coins.POST("/transfer", h.TransferCoins)
 			}
-			products := users.Group("/:user_id/products")
+			products := users.Group("/:id/products")
 			{
 				products.GET("/", h.GetUserProducts)
 			}
-
 		}
 	}
 	return r
