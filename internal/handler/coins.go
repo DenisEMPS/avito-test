@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"avito/internal/service"
 	"avito/internal/types"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -9,26 +11,39 @@ import (
 )
 
 func (h *Handler) GetInfo(c *gin.Context) {
-	username, ok := c.Get("username")
-	usrname := username.(string)
-	if !ok || username == "" {
+	param, ok := c.Get("username")
+	if !ok {
 		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	output, err := h.services.Coins.GetInfo(usrname)
-	if err != nil {
-		fmt.Println(err)
+	username, ok := param.(string)
+	if !ok || username == "" {
+		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
+		return
 	}
-	fmt.Println(output)
+	output, err := h.services.Coins.GetInfo(username)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			NewErrorResponse(c, http.StatusNotFound, "user not found")
+			return
+		}
+		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
+		return
+	}
+
 	c.JSON(http.StatusOK, output)
 }
 
 func (h *Handler) SendCoins(c *gin.Context) {
-	username, ok := c.Get("username")
-	usrname := username.(string)
+	param, ok := c.Get("username")
+	if !ok {
+		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	username, ok := param.(string)
 	if !ok || username == "" {
-		fmt.Println(username)
 		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
 		return
 	}
@@ -37,12 +52,19 @@ func (h *Handler) SendCoins(c *gin.Context) {
 
 	err := c.BindJSON(&input)
 	if err != nil {
-		NewErrorResponse(c, http.StatusInternalServerError, "invalid request")
+		NewErrorResponse(c, http.StatusBadRequest, "invalid request")
 		return
 	}
 
-	err = h.services.Send(usrname, input)
+	err = h.services.Send(username, input)
 	if err != nil {
+		if errors.Is(err, service.ErrRecieverNotFound) {
+			NewErrorResponse(c, http.StatusBadRequest, "user not found")
+			return
+		} else if errors.Is(err, service.ErrNotEnoughtCoins) {
+			NewErrorResponse(c, http.StatusBadRequest, "not enought coins")
+			return
+		}
 		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
 		fmt.Println(err)
 		return
@@ -54,13 +76,19 @@ func (h *Handler) SendCoins(c *gin.Context) {
 }
 
 func (h *Handler) BuyItem(c *gin.Context) {
-	username, ok := c.Get("username")
-	usrname := username.(string)
-	if !ok || username == "" {
-		fmt.Println(username)
+	param, ok := c.Get("username")
+	if !ok {
 		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
 		return
 	}
+
+	username, ok := param.(string)
+	if !ok || username == "" {
+		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	fmt.Println(username)
 
 	item := c.Param("item")
 	if item == "" {
@@ -70,14 +98,20 @@ func (h *Handler) BuyItem(c *gin.Context) {
 
 	input := new(types.BuyRequest)
 
-	err := c.ShouldBindJSON(&input)
+	err := c.BindJSON(&input)
 	if err != nil {
 		NewErrorResponse(c, http.StatusBadRequest, "invalid request")
 		return
 	}
-	err = h.services.BuyItem(usrname, item, input)
+	err = h.services.BuyItem(username, item, input)
 	if err != nil {
-		fmt.Println(err)
+		if errors.Is(err, service.ErrNotEnoughtCoins) {
+			NewErrorResponse(c, http.StatusBadRequest, "not enought coins")
+			return
+		} else if errors.Is(err, service.ErrItemNotFound) {
+			NewErrorResponse(c, http.StatusBadRequest, "item not found")
+			return
+		}
 		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
 		return
 	}

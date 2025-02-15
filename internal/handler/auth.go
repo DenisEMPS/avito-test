@@ -28,7 +28,7 @@ func (h *Handler) SignUp(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, map[string]int64{
+	c.JSON(http.StatusCreated, map[string]int{
 		"id": id,
 	})
 }
@@ -38,14 +38,14 @@ func (h *Handler) SignIn(c *gin.Context) {
 
 	err := c.BindJSON(&input)
 	if err != nil {
-		NewErrorResponse(c, http.StatusBadRequest, "invalid request params")
+		NewErrorResponse(c, http.StatusBadRequest, "invalid request")
 		return
 	}
 
 	token, err := h.services.Authorization.LoginUser(input)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCredentials) {
-			NewErrorResponse(c, http.StatusUnauthorized, "invalid request params")
+			NewErrorResponse(c, http.StatusUnauthorized, "unauthorized")
 			return
 		}
 		NewErrorResponse(c, http.StatusInternalServerError, "internal error")

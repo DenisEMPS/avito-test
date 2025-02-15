@@ -45,7 +45,7 @@ func main() {
 		}
 	}()
 
-	log.Info("App started on port", slog.Any("port", cfg.Server.Port))
+	log.Info("App started", slog.Any("port", cfg.Server.Port))
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)

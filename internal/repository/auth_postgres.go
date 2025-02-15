@@ -11,8 +11,13 @@ import (
 	"github.com/lib/pq"
 )
 
+var (
+	ErrUserExists   = errors.New("user allready exists")
+	ErrUserNotFound = errors.New("user not found")
+)
+
 type Authorization interface {
-	RegisterNewUser(user types.UserCreate, passHash []byte) (int64, error)
+	RegisterNewUser(user types.UserCreate, passHash []byte) (int, error)
 	LoginUser(username string) (types.UserDAO, error)
 }
 
@@ -25,12 +30,12 @@ func NewAuthPostgres(db *sqlx.DB, log *slog.Logger) *AuthPostgres {
 	return &AuthPostgres{db: db, log: log}
 }
 
-func (r *AuthPostgres) RegisterNewUser(user types.UserCreate, passHash []byte) (int64, error) {
-	const op = "auth_postgres.RegisterNewUser"
+func (r *AuthPostgres) RegisterNewUser(user types.UserCreate, passHash []byte) (int, error) {
+	const op = "auth_postgres.register_new_user"
 
 	query := "INSERT INTO users (username, pass_hash, name, surname, birthdate) VALUES($1, $2, $3, $4, $5) RETURNING id"
 
-	var id int64
+	var id int
 	err := r.db.QueryRow(query, user.Username, passHash, user.Name, user.Surname, user.Birthdate).Scan(&id)
 	if err != nil {
 		var pqErr *pq.Error
@@ -44,7 +49,7 @@ func (r *AuthPostgres) RegisterNewUser(user types.UserCreate, passHash []byte) (
 }
 
 func (r *AuthPostgres) LoginUser(username string) (types.UserDAO, error) {
-	const op = "auth_postgres.LoginUser"
+	const op = "auth_postgres.login_user"
 
 	var user types.UserDAO
 

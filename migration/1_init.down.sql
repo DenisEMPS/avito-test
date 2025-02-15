@@ -1,4 +1,4 @@
 DROP TABLE coins_transactions;
-DROP TABLE users_products;
+DROP TABLE inventory;
 DROP TABLE users;
-DROP TABLE products;
+DROP TABLE items;

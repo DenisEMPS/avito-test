@@ -31,7 +31,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 		api.GET("/info", h.GetInfo)
 
-		api.POST("/send_coins", h.SendCoins)
+		api.POST("/send_coin", h.SendCoins)
 
 		api.POST("/buy/:item", h.BuyItem)
 	}

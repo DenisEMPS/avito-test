@@ -14,8 +14,7 @@ type UserLoginDTO struct {
 }
 
 type UserDAO struct {
-	ID       int64  `db:"id"`
+	ID       int    `db:"id"`
 	Username string `db:"username"`
-	Name     string `db:"name"`
 	Password string `db:"password"`
 }

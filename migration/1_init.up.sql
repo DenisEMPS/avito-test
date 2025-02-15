@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users
     pass_hash TEXT NOT NULL,
     name VARCHAR(100) NOT NULL,
     surname VARCHAR(100) NOT NULL,
-    birthdate DATE,
+    birthdate DATE NOT NULL,
     coins INT DEFAULT 1000
 );
 

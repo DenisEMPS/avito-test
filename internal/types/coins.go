@@ -12,7 +12,7 @@ type CoinsHistory struct {
 }
 
 type Inventory struct {
-	Type     string `db:"type"`
+	Type     string `db:"item"`
 	Quantity int    `db:"quantity"`
 }
 
@@ -26,12 +26,13 @@ type Sent struct {
 	Amount int    `db:"amount"`
 }
 
-type SendCoinRequest struct {
-	ToUser string `json:"to_user"`
-	Amount int    `json:"amount"`
-}
+///
+///
+///
+///
+//
 
-type SentCoinsRequest struct {
+type SendCoinRequest struct {
 	ToUser string `json:"to_user"`
 	Amount int    `json:"amount"`
 }

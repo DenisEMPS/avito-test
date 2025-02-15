@@ -23,7 +23,7 @@ var (
 )
 
 type Authorization interface {
-	RegisterNewUser(user types.UserCreate) (int64, error)
+	RegisterNewUser(user types.UserCreate) (int, error)
 	LoginUser(user types.UserLoginDTO) (string, error)
 	ParseToken(token string) (string, error)
 }
@@ -37,8 +37,8 @@ func NewAuthService(repo repository.Authorization, log *slog.Logger) *AuthServic
 	return &AuthService{repo: repo, log: log}
 }
 
-func (a *AuthService) RegisterNewUser(user types.UserCreate) (int64, error) {
-	const op = "auth.RegisterNewUser"
+func (a *AuthService) RegisterNewUser(user types.UserCreate) (int, error) {
+	const op = "auth.register_new_user"
 	log := a.log.With(
 		slog.String("op", op),
 		slog.String("username", user.Username),
@@ -55,7 +55,7 @@ func (a *AuthService) RegisterNewUser(user types.UserCreate) (int64, error) {
 	id, err := a.repo.RegisterNewUser(user, passHash)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserExists) {
-			a.log.Info("user allready exists")
+			a.log.Info("user already exists")
 			return 0, fmt.Errorf("%s: %w", op, ErrUserExists)
 		}
 		log.Error("failed to register user", slog.String("error", err.Error()))
@@ -68,7 +68,7 @@ func (a *AuthService) RegisterNewUser(user types.UserCreate) (int64, error) {
 }
 
 func (a *AuthService) LoginUser(input types.UserLoginDTO) (string, error) {
-	const op = "auth.LoginUser"
+	const op = "auth.loginser"
 
 	log := a.log.With(
 		slog.String("op", op),
@@ -80,15 +80,15 @@ func (a *AuthService) LoginUser(input types.UserLoginDTO) (string, error) {
 	user, err := a.repo.LoginUser(input.Username)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
-			a.log.Info("user not found", slog.String("error", err.Error()))
+			a.log.Warn("user not found", slog.String("username", input.Username))
 			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
-		a.log.Error("failed to get user", slog.String("error", err.Error()))
+		a.log.Error("failed to get user", slog.String("error", err.Error()), slog.String("user", input.Username))
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		a.log.Info("invalid credentials", slog.String("error", err.Error()))
+		a.log.Warn("invalid credentials provided", slog.String("username", input.Username), slog.String("error", err.Error()))
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 	token, err := token.NewToken(user)
@@ -97,16 +97,18 @@ func (a *AuthService) LoginUser(input types.UserLoginDTO) (string, error) {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
+	a.log.Info("user successfully logged in", slog.String("username", input.Username))
+
 	return token, nil
 }
 
 func (a *AuthService) ParseToken(token string) (string, error) {
-	const op = "auth.ParseToken"
+	const op = "auth.parse_token"
 
 	tokenParsed, err := jwt.ParseWithClaims(token, &types.TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			a.log.Error("invalid signing method", slog.String("method", token.Method.Alg()), slog.String("token", token.Raw))
-			return nil, fmt.Errorf("%s: invalid signing method", op)
+			return nil, fmt.Errorf("invalid signing method: %s", op)
 		}
 
 		return []byte(os.Getenv("SECRET")), nil
@@ -128,7 +130,7 @@ func (a *AuthService) ParseToken(token string) (string, error) {
 		return "", ErrInvalidToken
 	}
 
-	a.log.Info("token successfully parsed", slog.String("user_id", fmt.Sprintf("%d", claims.User_id)))
+	a.log.Info("token successfully parsed", slog.String("username", claims.Username))
 
 	return claims.Username, nil
 }

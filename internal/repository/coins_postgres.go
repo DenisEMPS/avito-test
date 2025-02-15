@@ -11,13 +11,13 @@ import (
 )
 
 var (
-	ErrNotEnougthFunds    = errors.New("not enought funds")
-	ErrRecieverNotFounded = errors.New("reciever not founded")
-	ErrItemNotFounded     = errors.New("item not founded")
+	ErrNotEnougthFunds   = errors.New("not enought funds")
+	ErrReceverNotFounded = errors.New("reciever not found")
+	ErrItemNotFound      = errors.New("item not founded")
 )
 
 type Coins interface {
-	GetInfo(nickname string) (*types.InfoResponse, error)
+	GetInfo(username string) (*types.InfoResponse, error)
 	Send(username string, details types.SendCoinRequest) error
 	BuyItem(username string, item string, req *types.BuyRequest) error
 }
@@ -31,15 +31,15 @@ func NewCoinsPostgres(db *sqlx.DB, log *slog.Logger) *CoinsPostgres {
 	return &CoinsPostgres{db: db, log: log}
 }
 
-func (r *CoinsPostgres) GetInfo(nickname string) (*types.InfoResponse, error) {
-	const op = "coins_postgres.GetInfo"
+func (r *CoinsPostgres) GetInfo(username string) (*types.InfoResponse, error) {
+	const op = "coins_postgres.get_info"
 
 	var res types.InfoResponse
 	var receivedCoins []types.Received
 	var sentCoins []types.Sent
 
-	queryReceived := "SELECT from_user, amount FROM coins_transactions WHERE to_user = $1"
-	rowsReceived, err := r.db.Query(queryReceived, nickname)
+	query := "SELECT from_user, amount FROM coins_transactions WHERE to_user = $1"
+	rowsReceived, err := r.db.Query(query, username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("%s: %w", op, ErrUserNotFound)
@@ -51,13 +51,13 @@ func (r *CoinsPostgres) GetInfo(nickname string) (*types.InfoResponse, error) {
 	for rowsReceived.Next() {
 		var received types.Received
 		if err := rowsReceived.Scan(&received.FromUser, &received.Amount); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
+			return nil, fmt.Errorf("error to scan data %s: %w", op, err)
 		}
 		receivedCoins = append(receivedCoins, received)
 	}
 
 	querySent := "SELECT to_user, amount FROM coins_transactions WHERE from_user = $1"
-	rowsSent, err := r.db.Query(querySent, nickname)
+	rowsSent, err := r.db.Query(querySent, username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("%s: %w", op, ErrUserNotFound)
@@ -69,7 +69,7 @@ func (r *CoinsPostgres) GetInfo(nickname string) (*types.InfoResponse, error) {
 	for rowsSent.Next() {
 		var sent types.Sent
 		if err := rowsSent.Scan(&sent.ToUser, &sent.Amount); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
+			return nil, fmt.Errorf("error to scan data %s: %w", op, err)
 		}
 		sentCoins = append(sentCoins, sent)
 	}
@@ -80,7 +80,7 @@ func (r *CoinsPostgres) GetInfo(nickname string) (*types.InfoResponse, error) {
 	}
 
 	queryCoins := "SELECT coins FROM users WHERE username = $1"
-	err = r.db.QueryRow(queryCoins, nickname).Scan(&res.Coins)
+	err = r.db.QueryRow(queryCoins, username).Scan(&res.Coins)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("%s: %w", op, ErrUserNotFound)
@@ -88,8 +88,8 @@ func (r *CoinsPostgres) GetInfo(nickname string) (*types.InfoResponse, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	queryInventory := "SELECT item_type, quantity FROM inventory WHERE username = $1"
-	rowsInventory, err := r.db.Query(queryInventory, nickname)
+	queryInventory := "SELECT item, quantity FROM inventory WHERE username = $1"
+	rowsInventory, err := r.db.Query(queryInventory, username)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -110,7 +110,7 @@ func (r *CoinsPostgres) GetInfo(nickname string) (*types.InfoResponse, error) {
 }
 
 func (r *CoinsPostgres) Send(username string, details types.SendCoinRequest) error {
-	const op = "coins_postgres.Send"
+	const op = "coins_postgres.send"
 
 	var coins int
 	query := "SELECT coins from users WHERE username = $1"
@@ -131,7 +131,7 @@ func (r *CoinsPostgres) Send(username string, details types.SendCoinRequest) err
 	err = r.db.QueryRow(query, details.ToUser).Scan(&recExists)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrRecieverNotFounded
+			return ErrReceverNotFounded
 		}
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -160,12 +160,12 @@ func (r *CoinsPostgres) Send(username string, details types.SendCoinRequest) err
 }
 
 func (r *CoinsPostgres) BuyItem(username string, item string, req *types.BuyRequest) error {
-	const op = "coins_postgres.ByItem"
+	const op = "coins_postgres.buy_item"
 
-	var coins int
+	var usrCoins int
 	query := "SELECT coins FROM users WHERE username = $1"
 
-	err := r.db.QueryRow(query, username).Scan(&coins)
+	err := r.db.QueryRow(query, username).Scan(&usrCoins)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrUserNotFound
@@ -178,13 +178,16 @@ func (r *CoinsPostgres) BuyItem(username string, item string, req *types.BuyRequ
 	err = r.db.QueryRow(query, item).Scan(&price)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrItemNotFounded
+			return fmt.Errorf("%w: %s", ErrItemNotFound, op)
 		}
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	if price*req.Quantity > coins {
-		return ErrNotEnougthFunds
+	if req.Quantity > 0 {
+		price = price * req.Quantity
+	}
+	if price > usrCoins {
+		return fmt.Errorf("%w: %s", ErrNotEnougthFunds, op)
 	}
 
 	tx, err := r.db.Begin()
