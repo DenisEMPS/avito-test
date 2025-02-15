@@ -25,7 +25,7 @@ var (
 type Authorization interface {
 	RegisterNewUser(user types.UserCreate) (int64, error)
 	LoginUser(user types.UserLoginDTO) (string, error)
-	ParseToken(token string) (int64, error)
+	ParseToken(token string) (string, error)
 }
 
 type AuthService struct {
@@ -41,7 +41,7 @@ func (a *AuthService) RegisterNewUser(user types.UserCreate) (int64, error) {
 	const op = "auth.RegisterNewUser"
 	log := a.log.With(
 		slog.String("op", op),
-		slog.String("email", user.Email),
+		slog.String("username", user.Username),
 	)
 
 	log.Info("registering user")
@@ -72,12 +72,12 @@ func (a *AuthService) LoginUser(input types.UserLoginDTO) (string, error) {
 
 	log := a.log.With(
 		slog.String("op", op),
-		slog.String("email", input.Email),
+		slog.String("username", input.Username),
 	)
 
 	log.Info("attempting to login user")
 
-	user, err := a.repo.LoginUser(input.Email)
+	user, err := a.repo.LoginUser(input.Username)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
 			a.log.Info("user not found", slog.String("error", err.Error()))
@@ -100,7 +100,7 @@ func (a *AuthService) LoginUser(input types.UserLoginDTO) (string, error) {
 	return token, nil
 }
 
-func (a *AuthService) ParseToken(token string) (int64, error) {
+func (a *AuthService) ParseToken(token string) (string, error) {
 	const op = "auth.ParseToken"
 
 	tokenParsed, err := jwt.ParseWithClaims(token, &types.TokenClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -114,21 +114,21 @@ func (a *AuthService) ParseToken(token string) (int64, error) {
 
 	if err != nil {
 		a.log.Error("failed to parse token", slog.String("error", err.Error()), slog.String("token", token))
-		return 0, fmt.Errorf("%s: failed to parse token: %w", op, err)
+		return "", fmt.Errorf("%s: failed to parse token: %w", op, err)
 	}
 
 	if !tokenParsed.Valid {
 		a.log.Error("invalid token", slog.String("token", token))
-		return 0, ErrInvalidToken
+		return "", ErrInvalidToken
 	}
 
 	claims, ok := tokenParsed.Claims.(*types.TokenClaims)
 	if !ok {
 		a.log.Warn("token claims type assertion failed", slog.String("token", token))
-		return 0, ErrInvalidToken
+		return "", ErrInvalidToken
 	}
 
 	a.log.Info("token successfully parsed", slog.String("user_id", fmt.Sprintf("%d", claims.User_id)))
 
-	return claims.User_id, nil
+	return claims.Username, nil
 }

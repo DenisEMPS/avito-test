@@ -17,29 +17,24 @@ func NewHandler(services *service.Service, log *slog.Logger) *Handler {
 }
 
 func (h *Handler) InitRoutes() *gin.Engine {
-	r := gin.New()
+
+	r := gin.Default()
 
 	auth := r.Group("/auth")
 	{
-		auth.POST("/sign-up", h.SignUp)
-		auth.POST("/sign-in", h.SignIn)
+		auth.POST("sign-up", h.SignUp)
+		auth.POST("sign-in", h.SignIn)
 	}
 
-	api := r.Group("/api/v1", h.UserIdentity)
+	api := r.Group("/api", h.UserIdentity)
 	{
-		users := api.Group("/users")
-		{
-			users.GET("/:id")
-			coins := users.Group("/:id/coins")
-			{
-				coins.GET("/", h.GetCoinsHistory)
-				coins.POST("/transfer", h.TransferCoins)
-			}
-			products := users.Group("/:id/products")
-			{
-				products.GET("/", h.GetUserProducts)
-			}
-		}
+
+		api.GET("/info", h.GetInfo)
+
+		api.POST("/send_coins", h.SendCoins)
+
+		// api.GET("/buy/:item", BuyItem)
 	}
+
 	return r
 }

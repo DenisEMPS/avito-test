@@ -1,7 +1,7 @@
 package types
 
 type UserCreate struct {
-	Email     string `json:"email" binding:"required"`
+	Username  string `json:"username" binding:"required"`
 	Password  string `json:"password" binding:"required"`
 	Name      string `json:"name" binding:"required"`
 	Surname   string `json:"surname" binding:"required"`
@@ -9,13 +9,13 @@ type UserCreate struct {
 }
 
 type UserLoginDTO struct {
-	Email    string `json:"email" binding:"required"`
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
 type UserDAO struct {
 	ID       int64  `db:"user_id"`
-	Email    string `db:"email"`
+	Username string `db:"username"`
 	Name     string `db:"name"`
 	Password string `db:"password"`
 }

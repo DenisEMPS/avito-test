@@ -12,24 +12,14 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-type Product interface {
-}
-
-type Coins interface {
-}
-
-type Order interface {
-}
-
 type Repository struct {
 	Authorization
-	Product
 	Coins
-	Order
 }
 
 func NewRepositry(db *sqlx.DB, log *slog.Logger) *Repository {
 	return &Repository{
 		Authorization: NewAuthPostgres(db, log),
+		Coins:         NewCoinsPostgres(db, log),
 	}
 }

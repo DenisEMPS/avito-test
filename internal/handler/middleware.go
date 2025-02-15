@@ -29,11 +29,11 @@ func (h *Handler) UserIdentity(c *gin.Context) {
 		return
 	}
 
-	userId, err := h.services.ParseToken(headerParts[1])
+	username, err := h.services.ParseToken(headerParts[1])
 	if err != nil {
 		NewErrorResponse(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	c.Set("user_id", userId)
+	c.Set("username", username)
 }

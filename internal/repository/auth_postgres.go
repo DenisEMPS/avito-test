@@ -13,7 +13,7 @@ import (
 
 type Authorization interface {
 	RegisterNewUser(user types.UserCreate, passHash []byte) (int64, error)
-	LoginUser(email string) (types.UserDAO, error)
+	LoginUser(username string) (types.UserDAO, error)
 }
 
 type AuthPostgres struct {
@@ -28,10 +28,10 @@ func NewAuthPostgres(db *sqlx.DB, log *slog.Logger) *AuthPostgres {
 func (r *AuthPostgres) RegisterNewUser(user types.UserCreate, passHash []byte) (int64, error) {
 	const op = "auth_postgres.RegisterNewUser"
 
-	query := "INSERT INTO users (email, pass_hash, name, surname, birthdate) VALUES($1, $2, $3, $4, $5) RETURNING id"
+	query := "INSERT INTO users (username, pass_hash, name, surname, birthdate) VALUES($1, $2, $3, $4, $5) RETURNING id"
 
 	var id int64
-	err := r.db.QueryRow(query, user.Email, passHash, user.Name, user.Surname, user.Birthdate).Scan(&id)
+	err := r.db.QueryRow(query, user.Username, passHash, user.Name, user.Surname, user.Birthdate).Scan(&id)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
@@ -43,14 +43,14 @@ func (r *AuthPostgres) RegisterNewUser(user types.UserCreate, passHash []byte) (
 	return id, nil
 }
 
-func (r *AuthPostgres) LoginUser(email string) (types.UserDAO, error) {
+func (r *AuthPostgres) LoginUser(username string) (types.UserDAO, error) {
 	const op = "auth_postgres.LoginUser"
 
 	var user types.UserDAO
 
-	query := "SELECT id, email, pass_hash FROM users WHERE email = $1"
+	query := "SELECT id, username, pass_hash FROM users WHERE username = $1"
 
-	if err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Email, &user.Password); err != nil {
+	if err := r.db.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.Password); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return types.UserDAO{}, fmt.Errorf("%s: %w", op, ErrUserNotFound)
 		}

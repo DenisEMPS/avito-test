@@ -14,8 +14,8 @@ func NewToken(user types.UserDAO) (string, error) {
 			IssuedAt:  time.Now().Unix(),
 			ExpiresAt: time.Now().Add(12 * time.Hour).Unix(),
 		},
-		User_id: user.ID,
-		Email:   user.Email,
+		Username: user.Username,
+		User_id:  user.ID,
 	})
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
