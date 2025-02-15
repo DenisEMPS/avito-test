@@ -9,7 +9,7 @@ import (
 type Coins interface {
 	GetInfo(nickname string) (*types.InfoResponse, error)
 	Send(username string, details types.SendCoinRequest) error
-	ByItem(username string, item string, quantity float64) error
+	BuyItem(username string, item string, req *types.BuyRequest) error
 }
 
 type CoinsService struct {
@@ -29,6 +29,6 @@ func (s *CoinsService) Send(nickname string, details types.SendCoinRequest) erro
 	return s.repo.Send(nickname, details)
 }
 
-func (s *CoinsService) ByItem(username string, item string, quantity float64) error {
-	return s.repo.ByItem(username, item, quantity)
+func (s *CoinsService) BuyItem(username string, item string, req *types.BuyRequest) error {
+	return s.repo.BuyItem(username, item, req)
 }

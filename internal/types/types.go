@@ -37,6 +37,5 @@ type SentCoinsRequest struct {
 }
 
 type BuyRequest struct {
-	Item     string  `json:"item"`
-	Quantity float64 `json:"quantity"`
+	Quantity int `json:"quantity"`
 }

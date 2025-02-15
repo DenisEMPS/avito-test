@@ -19,7 +19,7 @@ var (
 type Coins interface {
 	GetInfo(nickname string) (*types.InfoResponse, error)
 	Send(username string, details types.SendCoinRequest) error
-	ByItem(username string, item string, quantity float64) error
+	BuyItem(username string, item string, req *types.BuyRequest) error
 }
 
 type CoinsPostgres struct {
@@ -159,10 +159,10 @@ func (r *CoinsPostgres) Send(username string, details types.SendCoinRequest) err
 	return tx.Commit()
 }
 
-func (r *CoinsPostgres) ByItem(username string, item string, quantity float64) error {
+func (r *CoinsPostgres) BuyItem(username string, item string, req *types.BuyRequest) error {
 	const op = "coins_postgres.ByItem"
 
-	var coins float64
+	var coins int
 	query := "SELECT coins FROM users WHERE username = $1"
 
 	err := r.db.QueryRow(query, username).Scan(&coins)
@@ -173,9 +173,9 @@ func (r *CoinsPostgres) ByItem(username string, item string, quantity float64) e
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	var price float64
+	var price int
 	query = "SELECT price FROM items WHERE name = $1"
-	err = r.db.QueryRow(query, item).Scan(price)
+	err = r.db.QueryRow(query, item).Scan(&price)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrItemNotFounded
@@ -183,7 +183,7 @@ func (r *CoinsPostgres) ByItem(username string, item string, quantity float64) e
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	if price*quantity > coins {
+	if price*req.Quantity > coins {
 		return ErrNotEnougthFunds
 	}
 
@@ -194,16 +194,16 @@ func (r *CoinsPostgres) ByItem(username string, item string, quantity float64) e
 
 	query = `UPDATE users SET coins = coins - $1
 			WHERE username = $2`
-	_, err = tx.Exec(query, username, price)
+	_, err = tx.Exec(query, price, username)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to update coins balance: %w %s %s", err, username, op)
 	}
 
-	query = `INSERT INTO inventory (username, quantity, item_id)
-			VALUES($1, $2, (SELECT id FROM items WHERE name = $3))`
+	query = `INSERT INTO inventory (username, quantity, item)
+			VALUES($1, $2, $3)`
 
-	_, err = tx.Exec(query, username, quantity, item)
+	_, err = tx.Exec(query, username, req.Quantity, item)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to insert data: %w %s %s", err, username, item)

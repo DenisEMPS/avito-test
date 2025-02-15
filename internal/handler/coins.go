@@ -10,12 +10,12 @@ import (
 
 func (h *Handler) GetInfo(c *gin.Context) {
 	username, ok := c.Get("username")
+	usrname := username.(string)
 	if !ok || username == "" {
 		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	usrname := username.(string)
 	output, err := h.services.Coins.GetInfo(usrname)
 	if err != nil {
 		fmt.Println(err)
@@ -68,6 +68,21 @@ func (h *Handler) BuyItem(c *gin.Context) {
 		return
 	}
 
-	err := h.services.BuyItem(usrname, item)
+	input := new(types.BuyRequest)
 
+	err := c.ShouldBindJSON(&input)
+	if err != nil {
+		NewErrorResponse(c, http.StatusBadRequest, "invalid request")
+		return
+	}
+	err = h.services.BuyItem(usrname, item, input)
+	if err != nil {
+		fmt.Println(err)
+		NewErrorResponse(c, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]string{
+		"status": "success",
+	})
 }

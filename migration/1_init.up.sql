@@ -13,26 +13,39 @@ CREATE TABLE IF NOT EXISTS items
 (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
-    price NUMERIC(8,2) NOT NULL UNIQUE
+    price INT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS inventory 
 (
     id SERIAL PRIMARY KEY,
-    item_id INT,
-    username VARCHAR(255),
-    quantity INT,
-    FOREIGN KEY (username) REFERENCES users(username)
-    FOREIGN KEY (item_id) REFERENCES items (item_id)
+    item VARCHAR(100) NOT NULL,
+    username VARCHAR(100) NOT NULL,
+    quantity INT DEFAULT 1,
+    FOREIGN KEY (username) REFERENCES users (username),
+    FOREIGN KEY (item) REFERENCES items (name)
 );
 
 CREATE TABLE IF NOT EXISTS coins_transactions
 (
-    coins_transaction_id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     from_user VARCHAR(100) NOT NULL,
     to_user VARCHAR(100) NOT NULL,
     amount INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (from_user) REFERENCES users (username)
+    FOREIGN KEY (from_user) REFERENCES users (username),
     FOREIGN KEY (to_user) REFERENCES users (username)
 );
+
+INSERT INTO items (name, price)
+VALUES
+('t-shirt', 80),
+('cup', 20),
+('book', 50),
+('pen', 10),
+('powerbank', 200),
+('hoody', 300),
+('umbrella', 200),
+('socks', 10),
+('wallet', 50),
+('pink-hoody', 0);

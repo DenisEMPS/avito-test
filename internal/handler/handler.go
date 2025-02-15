@@ -33,7 +33,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 		api.POST("/send_coins", h.SendCoins)
 
-		// api.GET("/buy/:item", BuyItem)
+		api.POST("/buy/:item", h.BuyItem)
 	}
 
 	return r

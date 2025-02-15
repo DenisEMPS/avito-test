@@ -14,7 +14,7 @@ func (h *Handler) SignUp(c *gin.Context) {
 
 	err := c.BindJSON(&input)
 	if err != nil {
-		NewErrorResponse(c, http.StatusBadRequest, "invalid request params")
+		NewErrorResponse(c, http.StatusBadRequest, "invalid request")
 		return
 	}
 

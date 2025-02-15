@@ -5,7 +5,7 @@ type UserCreate struct {
 	Password  string `json:"password" binding:"required"`
 	Name      string `json:"name" binding:"required"`
 	Surname   string `json:"surname" binding:"required"`
-	Birthdate string `json:"birthdate"`
+	Birthdate string `json:"birthdate" binding:"required"`
 }
 
 type UserLoginDTO struct {
@@ -14,7 +14,7 @@ type UserLoginDTO struct {
 }
 
 type UserDAO struct {
-	ID       int64  `db:"user_id"`
+	ID       int64  `db:"id"`
 	Username string `db:"username"`
 	Name     string `db:"name"`
 	Password string `db:"password"`
